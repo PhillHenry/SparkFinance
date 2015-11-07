@@ -9,17 +9,22 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>sparkjobs</artifactId>
+    <artifactId>config</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>com.henryp.sparkfinance</groupId>
-            <artifactId>config</artifactId>
+            <artifactId>feeds</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.henryp.sparkfinance</groupId>
+            <artifactId>logging</artifactId>
             <version>${parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-mllib_2.11</artifactId>
+            <artifactId>spark-core_2.11</artifactId>
             <version>${spark.version}</version>
         </dependency>
     </dependencies>

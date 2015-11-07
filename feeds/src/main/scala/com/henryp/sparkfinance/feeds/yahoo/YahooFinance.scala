@@ -1,11 +1,9 @@
 package com.henryp.sparkfinance.feeds.yahoo
 
-import java.io.{PrintWriter, FileWriter}
+import java.io.{FileWriter, PrintWriter}
 
-import scala.io.BufferedSource
-import scala.io.Source
-import scala.util.Failure
-import scala.util.Try
+import scala.io.{BufferedSource, Source}
+import scala.util.{Failure, Try}
 
 class YahooDataExtractor(directory: String) {
 

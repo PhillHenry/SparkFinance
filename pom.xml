@@ -9,6 +9,7 @@
         <module>feeds</module>
         <module>sparkjobs</module>
         <module>logging</module>
+        <module>config</module>
     </modules>
     <properties>
         <scala.version>2.11.7</scala.version>
