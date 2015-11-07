@@ -13,10 +13,10 @@ package object sparkjobs extends Logging {
    */
   def aggregate[T: ClassTag](all:        RDD[(String, String)],
                              isNotMeta:  String => Boolean,
-                             toDomain:   String => T ): RDD[T] = {
+                             toDomain:   (String, String) => T ): RDD[T] = {
     def toRDD(ticker: String, text: String): TraversableOnce[T] = {
       val lines = text.lines.filter(isNotMeta(_))
-      lines.map { case (line) => toDomain(line) }
+      lines.map { case (line) => toDomain(ticker, line) }
     }
     all.flatMap { case(ticker, text) => toRDD(ticker, text) }
   }
