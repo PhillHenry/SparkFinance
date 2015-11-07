@@ -10,16 +10,14 @@ package object sparkjobs extends Logging {
 
   type TickerDate = String
 
-  def toDateTicker[T: ClassTag](all:        RDD[(String, String)],
-                                isNotMeta:  String => Boolean,
-                                toDomain:   String => T ): RDD[T] = {
+  def aggregate[T: ClassTag](all:        RDD[(String, String)],
+                             isNotMeta:  String => Boolean,
+                             toDomain:   String => T ): RDD[T] = {
     def toRDD(ticker: String, text: String): TraversableOnce[T] = {
       val lines = text.lines.filter(isNotMeta(_))
       lines.map { case (line) => toDomain(line) }
     }
-    all.flatMap { case(ticker, text) =>
-      toRDD(ticker, text)
-    }
+    all.flatMap { case(ticker, text) => toRDD(ticker, text) }
   }
 
   def dateAndPriceFor(raw:                RDD[String],
@@ -27,16 +25,14 @@ package object sparkjobs extends Logging {
                       lineToDateAndPrice: String => (TickerDate, Double)): RDD[(TickerDate, Double)] =
     raw.filter(isNotMeta(_)).map(lineToDateAndPrice(_))
 
-  def pearsonCorrelationValue(datePrice1: RDD[(TickerDate, Double)], datePrice2: RDD[(TickerDate, Double)]): Double = {
-    val joined: RDD[(TickerDate, (Double, Double))] = datePrice1.join(datePrice2)
+  def pearsonCorrelationValue[K](keyVal1: RDD[(K, Double)], keyVal2: RDD[(K, Double)]): Double = {
+    val joined: RDD[(K, (Double, Double))] = keyVal1.join(keyVal2)
 
-    val prices1  = joined map { case(date, prices) => prices._1 }
-    val prices2  = joined map { case(date, prices) => prices._2 }
+    val series1  = joined map { case(key, forKey) => forKey._1 }
+    val series2  = joined map { case(key, forKey) => forKey._2 }
 
     val algorithm = "pearson"
-    val correlation = Statistics.corr(prices1, prices2, algorithm)
-
-    correlation
+    Statistics.corr(series1, series2, algorithm)
   }
 
 }
