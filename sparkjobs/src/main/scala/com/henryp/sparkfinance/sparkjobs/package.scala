@@ -11,25 +11,15 @@ package object sparkjobs extends Logging {
   type TickerDate = String
 
   def toDateTicker[T: ClassTag](all:        RDD[(String, String)],
-                      isNotMeta:  String => Boolean,
-                      toDomain:   String => T ): RDD[T] = {
+                                isNotMeta:  String => Boolean,
+                                toDomain:   String => T ): RDD[T] = {
     def toRDD(ticker: String, text: String): TraversableOnce[T] = {
       val lines = text.lines.filter(isNotMeta(_))
-      lines.map { case (line) => toDomain(line)
-        //        val tried = Try( ((date(line), ticker), closingPrice(line)) )
-        //        tried match {
-        //          case Success(x) => x
-        //          case Failure(x) =>
-        //            throw new IllegalArgumentException(ticker + ": " + line)
-        //        }
-
-      }
+      lines.map { case (line) => toDomain(line) }
     }
-    val total = all.flatMap { case(ticker, text) =>
+    all.flatMap { case(ticker, text) =>
       toRDD(ticker, text)
     }
-//    total
-    ???
   }
 
   def dateAndPriceFor(raw:                RDD[String],
