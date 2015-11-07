@@ -26,8 +26,8 @@ package object sparkjobs extends Logging {
                         toDomain:   String => T): RDD[T] =
     raw.filter(isNotMeta(_)).map(toDomain(_))
 
-  def pearsonCorrelationValue(keyVal1: RDD[(String, Double)], keyVal2: RDD[(String, Double)]): Double = {
-    val joined: RDD[(String, (Double, Double))] = keyVal1.join(keyVal2)
+  def pearsonCorrelationValue[K: ClassTag](keyVal1: RDD[(K, Double)], keyVal2: RDD[(K, Double)]): Double = {
+    val joined: RDD[(K, (Double, Double))] = keyVal1.join(keyVal2)
 
     val series1  = joined map { case(key, forKey) => forKey._1 }
     val series2  = joined map { case(key, forKey) => forKey._2 }
