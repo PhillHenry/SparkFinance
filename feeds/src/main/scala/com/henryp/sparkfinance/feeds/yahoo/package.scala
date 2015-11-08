@@ -6,11 +6,19 @@ package object yahoo {
 
   type DateTickerPriceVolume = ((TickerDate, String), Double, Double)
 
+  type DateTickerPrice = ((TickerDate, String), Double)
+
   def isNotMeta(line: String): Boolean = !line.startsWith("Date")
 
-  def dateTickerKey(ticker: String, line: String): DateTickerPriceVolume = ((date(line), ticker), closingPrice(line), volume(line))
+  def dateTickerToPriceVolume(ticker: String, line: String): DateTickerPriceVolume = ((date(line), ticker), closingPrice(line), volume(line))
+
+  def dateTickerToPrice(ticker: String, line: String): DateTickerPrice = ((date(line), ticker), closingPrice(line))
+
+  def asDateToPrice(kv: DateTickerPrice): (TickerDate, Double) = (kv._1._1, kv._2)
 
   def matchesTicker(ticker: String, tuple: DateTickerPriceVolume) = tuple._1._2.contains(ticker) // TODO remove the directory
+
+  def matchesTicker(ticker: String, tuple: DateTickerPrice) = tuple._1._2.contains(ticker) // TODO remove the directory
 
   def lineToDateAndClosePrice(line: String): (String, Double) = {
     (date(line), closingPrice(line))

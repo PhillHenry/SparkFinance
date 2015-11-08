@@ -4,6 +4,13 @@ import org.scalatest.{Matchers, WordSpec}
 
 class StockCorrelationSpec extends WordSpec with Matchers {
 
+  "all combination of tickers" should {
+    "be compared" in {
+      val allPairs = StockCorrelation.comparisonPairs(List("1", "2", "3", "4", "5"))
+      allPairs should have size (4+3+2+1)
+    }
+  }
+
   "args" should {
     "be parsed" in {
       val directory = "directory"

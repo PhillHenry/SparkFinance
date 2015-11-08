@@ -1,12 +1,17 @@
 package com.henryp.sparkfinance.sparkjobs.yahoo
 
 import com.henryp.sparkfinance.config.Spark
+import com.henryp.sparkfinance.feeds.yahoo._
+import com.henryp.sparkfinance.logging.Logging
+import com.henryp.sparkfinance.sparkjobs._
+
+import scala.annotation.tailrec
 
 case class StockCorrelationConfig(directory: String = "./target",
                                   sparkUrl: String = Spark.localMaster,
                                   tickers: Seq[String] = List[String]())
 
-object StockCorrelation {
+object StockCorrelation extends Logging {
 
   def parseArgs(args: Array[String]): Option[StockCorrelationConfig] = {
     val parser = new scopt.OptionParser[StockCorrelationConfig]("StockCorrelation") {
@@ -20,7 +25,39 @@ object StockCorrelation {
   }
 
   def main(args: Array[String]): Unit = {
+    val configOption = parseArgs(args)
+    configOption.orElse {
+      error("invalid arguments: " + args.mkString(","))
+      None
+    } foreach { config =>
+      val comparisons = doCorrelations(config)
+      comparisons foreach(println(_))
+    }
+  }
 
+  def comparisonPairs[T](tickers: Seq[T]): Seq[(T, T)] = {
+    @tailrec
+    def allPairs[T](toProcess: List[T], already: Seq[(T, T)]): Seq[(T, T)] = {
+      toProcess match {
+        case Nil      => already
+        case x :: xs  => allPairs(xs,  already ++ xs.map(other => (x, other)))
+      }
+    }
+    allPairs(tickers.toList, Seq())
+  }
+
+  def doCorrelations(config: StockCorrelationConfig): Seq[(String, String, Double)] = {
+    val context       = Spark.sparkContext(config.sparkUrl)
+    val pairs         = comparisonPairs(config.tickers)
+    val all           = context.wholeTextFiles(config.directory)
+    val aggregated    = aggregate(all, isNotMeta, dateTickerToPrice)
+    val pairsCorr     = pairs map { case(t1, t2) =>
+      val series1 = aggregated.filter(matchesTicker(t1, _)).map(asDateToPrice)
+      val series2 = aggregated.filter(matchesTicker(t2, _)).map(asDateToPrice)
+      (t1, t2, pearsonCorrelationValue(series1, series2))
+    }
+    context.stop()
+    pairsCorr
   }
 
 }
