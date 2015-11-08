@@ -19,6 +19,7 @@
         <commons-io.version>2.4</commons-io.version>
         <hadoop.version>2.6.0</hadoop.version>
         <spark.version>1.5.1</spark.version>
+        <scopt.version>3.3.0</scopt.version>
     </properties>
 
     <build>
@@ -89,7 +90,11 @@
             <version>1.12.4</version>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>com.github.scopt</groupId>
+            <artifactId>scopt_2.11</artifactId>
+            <version>${scopt.version}</version>
+        </dependency>
     </dependencies>
 
 </project>
