@@ -19,7 +19,7 @@ case class StockCorrelationConfig(directory: String     = "./target",
  * -d /home/henryp/Documents/Finance/Historical/
  * -t HSBA,BARC
  * -s spark://192.168.1.9:7077
- * -j /home/henryp/Code/Scala/MyCode/SparkFinance/sparkjobs/target/sparkjobs-1.0-SNAPSHOT.jar,/home/henryp/Code/Scala/MyCode/SparkFinance/logging/target/logging-1.0-SNAPSHOT.jar,/home/henryp/Code/Scala/MyCode/SparkFinance/feeds/target/feeds-1.0-SNAPSHOT.jar
+ * -j /home/henryp/Code/Scala/MyCode/SparkFinance/sparkjobs/target/sparkjobs-1.0-SNAPSHOT.jar
  */
 object StockCorrelation extends Logging {
 
@@ -73,7 +73,7 @@ object StockCorrelation extends Logging {
     val pairs         = comparisonPairs(config.tickers)
     debug(s"Comparing: ${pairs.mkString(",")}")
     val all           = context.wholeTextFiles(config.directory)
-    val aggregated    = aggregate(all, isNotMeta, dateTickerToPrice)
+    val aggregated    = aggregate(all, !_.startsWith("D"), dateTickerToPrice)
     val pairsCorr     = pairs map { case(t1, t2) =>
       debug(s"processing $t1 and $t2")
       val series1 = aggregated.filter(matchesTicker(t1, _)).map(asDateToPrice)

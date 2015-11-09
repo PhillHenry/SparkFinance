@@ -14,11 +14,6 @@
     <dependencies>
         <dependency>
             <groupId>com.henryp.sparkfinance</groupId>
-            <artifactId>feeds</artifactId>
-            <version>${parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.henryp.sparkfinance</groupId>
             <artifactId>logging</artifactId>
             <version>${parent.version}</version>
         </dependency>
