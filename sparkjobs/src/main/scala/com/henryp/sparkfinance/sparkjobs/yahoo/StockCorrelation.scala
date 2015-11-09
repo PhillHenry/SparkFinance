@@ -4,6 +4,7 @@ import com.henryp.sparkfinance.config.Spark
 import com.henryp.sparkfinance.feeds.yahoo._
 import com.henryp.sparkfinance.logging.Logging
 import com.henryp.sparkfinance.sparkjobs._
+import org.apache.spark.SparkContext
 
 import scala.annotation.tailrec
 
@@ -42,7 +43,11 @@ object StockCorrelation extends Logging {
       error("invalid arguments: " + args.mkString(","))
       None
     } foreach { config =>
-      val comparisons = doCorrelations(config)
+      val comparisons = doCorrelations(config, {context =>
+        info("Finished. Press any key to end app")
+        Console.in.read
+        context.stop()
+      })
       info("Finished processing")
       comparisons foreach(x => info(x.toString()))
     }
@@ -59,7 +64,7 @@ object StockCorrelation extends Logging {
     allPairs(tickers.toList, Seq())
   }
 
-  def doCorrelations(config: StockCorrelationConfig): Seq[(String, String, Double)] = {
+  def doCorrelations(config: StockCorrelationConfig, onFinished: SparkContext => Unit): Seq[(String, String, Double)] = {
     val context       = Spark.sparkContext(config.sparkUrl)
     config.jars.foreach{ jar =>
       debug(s"Adding JAR $jar")
@@ -75,7 +80,7 @@ object StockCorrelation extends Logging {
       val series2 = aggregated.filter(matchesTicker(t2, _)).map(asDateToPrice)
       (t1, t2, pearsonCorrelationValue(series1, series2))
     }
-    context.stop()
+    onFinished(context)
     pairsCorr
   }
 

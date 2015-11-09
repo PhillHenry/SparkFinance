@@ -9,7 +9,8 @@ class StockCorrelationIntegrationSpec extends WordSpec with Matchers {
 
   "pearson correlations" should {
     "be generated" in {
-      val correlations = StockCorrelation.doCorrelations(StockCorrelationConfig(directory = dataDirectory, tickers=List("HSBA", "BARC")))
+      val config = StockCorrelationConfig(directory = dataDirectory, tickers=List("HSBA", "BARC"))
+      val correlations = StockCorrelation.doCorrelations(config, { config => config.stop() })
       correlations should have size 1
     }
   }
