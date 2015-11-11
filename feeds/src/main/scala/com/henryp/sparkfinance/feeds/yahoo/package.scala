@@ -16,9 +16,9 @@ package object yahoo {
 
   def asDateToPrice(kv: DateTickerPrice): (TickerDate, Double) = (kv._1._1, kv._2)
 
-  def matchesTicker(ticker: String, tuple: DateTickerPriceVolume) = tuple._1._2.contains(ticker) // TODO remove the directory
+  def matchesTicker(ticker: String, tuple: DateTickerPriceVolume): Boolean = tuple._1._2.contains(ticker) // TODO remove the directory
 
-  def matchesTicker(ticker: String, tuple: DateTickerPrice) = tuple._1._2.contains(ticker) // TODO remove the directory
+  def matchesTicker(ticker: String, tuple: DateTickerPrice): Boolean = tuple._1._2.contains(ticker) // TODO remove the directory
 
   def lineToDateAndClosePrice(line: String): (String, Double) = {
     (date(line), closingPrice(line))

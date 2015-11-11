@@ -5,13 +5,15 @@ import com.henryp.sparkfinance.feeds.yahoo._
 import com.henryp.sparkfinance.logging.Logging
 import com.henryp.sparkfinance.sparkjobs._
 import org.apache.spark.SparkContext
+import org.apache.spark.rdd.RDD
 
 import scala.annotation.tailrec
 
 case class StockCorrelationConfig(directory: String     = "./target",
                                   sparkUrl: String      = Spark.localMaster,
                                   tickers: Seq[String]  = List[String](),
-                                  jars: Seq[String]     = List[String]() )
+                                  jars: Seq[String]     = List[String](),
+                                  numPartitions: Int    = 2)
 
 /**
  * Run with arguments like:
@@ -33,6 +35,7 @@ object StockCorrelation extends Logging {
       opt[Seq[String]]('j', "jars") valueName "<jar1>,<jar2>..."  action { (value, config) =>
         config.copy(jars = value)
       } text "jars"
+      opt[Int]('p', "partitions") action { case(value, config) => config.copy(numPartitions = value) } text "number of partions"
     }
     parser.parse(args, StockCorrelationConfig())
   }
@@ -65,23 +68,32 @@ object StockCorrelation extends Logging {
   }
 
   def doCorrelations(config: StockCorrelationConfig, onFinished: SparkContext => Unit): Seq[(String, String, Double)] = {
-    val context       = Spark.sparkContext(config.sparkUrl)
-    config.jars.foreach{ jar =>
-      debug(s"Adding JAR $jar")
-      context.addJar(jar)
-    }
+    val context       = getSparkContext(config)
     val pairs         = comparisonPairs(config.tickers)
-    debug(s"Comparing: ${pairs.mkString(",")}")
-    val all           = context.wholeTextFiles(config.directory)
-    val aggregated    = aggregate(all, !_.startsWith("D"), dateTickerToPrice)
-    val pairsCorr     = pairs map { case(t1, t2) =>
-      debug(s"processing $t1 and $t2")
-      val series1 = aggregated.filter(matchesTicker(t1, _)).map(asDateToPrice)
-      val series2 = aggregated.filter(matchesTicker(t2, _)).map(asDateToPrice)
-      (t1, t2, pearsonCorrelationValue(series1, series2))
-    }
+    val all           = context.wholeTextFiles(config.directory, minPartitions = config.numPartitions)
+    val aggregated    = aggregate(all, isNotMeta, dateTickerToPrice)
+    val pairsCorr     = findPearsonCorrelation(pairs, aggregated)
     onFinished(context)
     pairsCorr
   }
 
+  def findPearsonCorrelation(pairs: Seq[(String, String)], aggregated: RDD[DateTickerPrice]): Seq[(String, String, Double)] = {
+    debug(s"Comparing: ${pairs.mkString(",")}")
+    val pairsCorr = pairs map { case (ticker1, ticker2) =>
+      debug(s"processing $ticker1 and $ticker2")
+      val series1 = aggregated.filter(matchesTicker(ticker1, _)).map(asDateToPrice)
+      val series2 = aggregated.filter(matchesTicker(ticker2, _)).map(asDateToPrice)
+      (ticker1, ticker2, pearsonCorrelationValue(series1, series2))
+    }
+    pairsCorr
+  }
+
+  def getSparkContext(config: StockCorrelationConfig): SparkContext = {
+    val context = Spark.sparkContext(config.sparkUrl)
+    config.jars.foreach { jar =>
+      debug(s"Adding JAR $jar")
+      context.addJar(jar)
+    }
+    context
+  }
 }
