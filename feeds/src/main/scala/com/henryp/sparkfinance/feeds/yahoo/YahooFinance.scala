@@ -2,21 +2,23 @@ package com.henryp.sparkfinance.feeds.yahoo
 
 import java.io.{FileWriter, PrintWriter}
 
+import com.henryp.sparkfinance.feeds.yahoo.YahooFinance.{parseEndDate, parseStartDate}
+
 import scala.io.{BufferedSource, Source}
 import scala.util.{Failure, Try}
 
-class YahooDataExtractor(directory: String) {
+class YahooDataExtractor(config: YahooFinanceConfig) {
 
   def readAllTickerData(): Unit = {
-    val content: BufferedSource = Source.fromFile(s"$directory/tickers.txt")
-    content.getLines().foreach(getHistoricalData(_))
+    val content: BufferedSource = Source.fromFile(config.tickerFile)
+    content.getLines().foreach(downloadHistoricalData(_))
     content.close()
   }
 
-  def getHistoricalData(ticker: String): Unit = {
-    val writer = new FileWriter(s"$directory/$ticker")
+  def downloadHistoricalData(ticker: String): Unit = {
+    val writer    = new FileWriter(s"${config.outputDir}/$ticker")
     val bufWriter = new PrintWriter(writer)
-    val tried = Try(hitPage(ticker, handleLine(bufWriter)))
+    val tried     = Try(hitPage(ticker, handleLine(bufWriter)))
 
     tried match {
       case Failure(x) => println(ticker)
@@ -29,15 +31,34 @@ class YahooDataExtractor(directory: String) {
   def handleLine(writer: PrintWriter): String => Unit = writer.println(_)
 
   def hitPage(ticker: String, lineHandler: String => Unit): Unit = {
-    // TODO make the dates configurable
-    val content: BufferedSource = Source.fromURL(s"http://ichart.finance.yahoo.com/table.csv?s=$ticker&a=07&b=19&c=2007&d=07&e=19&f=2015&g=d&ignore=.csv")
-    val iterator = content.getLines()
+    val startDate = parseStartDate(config.startMMDDYYYY)
+    val endDate   = parseEndDate(config.endMMDDYYYY)
+    val content   = Source.fromURL(s"http://ichart.finance.yahoo.com/table.csv?s=$ticker&$startDate&$endDate&g=d&ignore=.csv")
+    val iterator  = content.getLines()
     iterator.foreach(x => lineHandler(x))
     content.close()
   }
 }
 
+case class YahooFinanceConfig(tickerFile: String    = "tickers.tzt",
+                              startMMDDYYYY: String = "07-19-2007",
+                              endMMDDYYYY: String   = "07-19-2015",
+                              outputDir: String     = "/tmp")
+
 object YahooFinance {
+
+  def parseStartDate(date: String): String = s"a=${date.substring(0,2)}&b=${date.substring(3,5)}&c=${date.substring(6,10)}"
+  def parseEndDate(date: String):   String = s"d=${date.substring(0,2)}&e=${date.substring(3,5)}&f=${date.substring(6,10)}"
+
+  def parseArgs(args: Array[String]): Option[YahooFinanceConfig] = {
+    val parser = new scopt.OptionParser[YahooFinanceConfig]("Yahoo data extractor") {
+      opt[String]('d', "directory")   action { case(value, config) => config.copy(outputDir = value) } text "data directory"
+      opt[String]('s', "start")       action { case(value, config) => config.copy(startMMDDYYYY = value) } text "start date MM-DD-YYYY"
+      opt[String]('e', "end")         action { case(value, config) => config.copy(endMMDDYYYY = value) } text "end date MM-DD-YYYY"
+      opt[String]('f', "ticker file") action { case(value, config) => config.copy(tickerFile = value) } text "file with ticker symbols to download (1 ticker per line)"
+    }
+    parser.parse(args, YahooFinanceConfig())
+  }
 
   /**
    * TODO use Scopt so we can make this CLI more versatile
@@ -45,9 +66,13 @@ object YahooFinance {
    * @param args a single arguments for where the tickers.txt file lives and also where files are output
    */
   def main(args: Array[String]): Unit = {
-    val app = new YahooDataExtractor(args(0))
-    app.readAllTickerData()
-    println("finished")
+    parseArgs(args).orElse {
+      None
+    } foreach { config =>
+      val app = new YahooDataExtractor(config)
+      app.readAllTickerData()
+      println("finished")
+    }
   }
 
 }

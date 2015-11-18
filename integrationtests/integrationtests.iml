@@ -14,9 +14,10 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="scala-sdk-2.11.6" level="application" />
     <orderEntry type="module" module-name="sparkjobs" />
-    <orderEntry type="module" module-name="config" />
     <orderEntry type="module" module-name="feeds" />
+    <orderEntry type="module" module-name="config" />
     <orderEntry type="module" module-name="logging" />
     <orderEntry type="library" name="Maven: org.apache.spark:spark-core_2.11:1.5.1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.avro:avro-mapred:hadoop2:1.7.7" level="project" />
