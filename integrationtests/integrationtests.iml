@@ -180,5 +180,6 @@
     <orderEntry type="library" scope="TEST" name="Maven: org.scalacheck:scalacheck_2.11:1.12.4" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.scala-sbt:test-interface:1.0" level="project" />
     <orderEntry type="library" name="Maven: com.github.scopt:scopt_2.11:3.3.0" level="project" />
+    <orderEntry type="library" name="scala-sdk-2.11.7 (2)" level="application" />
   </component>
 </module>

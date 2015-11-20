@@ -2,6 +2,7 @@ package com.henryp.sparkfinance.sparkjobs.yahoo
 
 import com.henryp.sparkfinance.feeds.yahoo._
 import com.henryp.sparkfinance.sparkjobs._
+import org.apache.spark.rdd.RDD
 
 object StockSVM {
 
@@ -12,6 +13,8 @@ object StockSVM {
       val aggregated      = aggregate(all, isNotMeta, dayTickerToPriceVolume)
       val dependentTic    = config.tickers.head
       val indepdenentTics = config.tickers.drop(1)
+
+      var joined: RDD[(TickerDate, Array[Double])] = null
     })
   }
 

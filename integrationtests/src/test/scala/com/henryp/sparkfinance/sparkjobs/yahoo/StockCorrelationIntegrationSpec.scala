@@ -21,8 +21,8 @@ class StockCorrelationIntegrationSpec extends WordSpec with Matchers {
       val context       = Spark.sparkContext()
       val all           = context.wholeTextFiles(dataDirectory)
       val aggregated    = aggregate(all, isNotMeta, dateTickerToPrice)
-      val hsba          = aggregated.filter(matchesTicker[DateTickerPrice, TickerDate]("HSBA", _))
-      val barc          = aggregated.filter(matchesTicker[DateTickerPrice, TickerDate]("BARC", _))
+      val hsba          = aggregated.filter(matchesTicker[DateTickerPrice[TickerDate]]("HSBA", _))
+      val barc          = aggregated.filter(matchesTicker[DateTickerPrice[TickerDate]]("BARC", _))
 
       hsba.count() shouldEqual 9 // 10 lines - 1 meta data line
       barc.count() shouldEqual 9 // ditto

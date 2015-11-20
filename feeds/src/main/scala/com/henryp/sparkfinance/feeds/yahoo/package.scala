@@ -6,25 +6,26 @@ package object yahoo {
 
   type TickerDate = String
 
-  type DateTickerPriceVolume = ((TickerDate, String), Double, Double)
+  type DateTickerPriceVolume[T] = ((T, String), Double, Double)
 
-  type DayTickerPriceVolume = ((Int, String), Double, Double)
-
-  type DateTickerPrice = ((TickerDate, String), Double)
+  type DateTickerPrice[T] = ((T, String), Double)
 
   def isNotMeta(line: String): Boolean = !line.startsWith("Date")
 
-  def dateTickerToPriceVolume(ticker: String, line: String): DateTickerPriceVolume = ((date(line), ticker), closingPrice(line), volume(line))
+  def dateTickerToPriceVolume[T](ticker: String, line: String): DateTickerPriceVolume[T]
+    = ((date(line).asInstanceOf[T], ticker), closingPrice(line), volume(line))
 
-  def dayTickerToPriceVolume(ticker: String, line: String): DayTickerPriceVolume = ((toDaysFromEpoch(date(line)), ticker), closingPrice(line), volume(line))
+  def dayTickerToPriceVolume[T](ticker: String, line: String): DateTickerPriceVolume[T]
+    = ((toDaysFromEpoch(date(line)).asInstanceOf[T], ticker), closingPrice(line), volume(line))
 
-  def dateTickerToPrice(ticker: String, line: String): DateTickerPrice = ((date(line), ticker), closingPrice(line))
+  def dateTickerToPrice[T](ticker: String, line: String): DateTickerPrice[T]
+    = ((date(line).asInstanceOf[T], ticker), closingPrice(line))
 
-  def asDateToPrice(kv: DateTickerPrice): (TickerDate, Double) = (kv._1._1, kv._2)
+  def asDateToPrice[T](kv: DateTickerPrice[T]): (T, Double)
+    = (kv._1._1, kv._2)
 
-  def lineToDateAndClosePrice(line: String): (String, Double) = {
-    (date(line), closingPrice(line))
-  }
+  def lineToDateAndClosePrice(line: String): (String, Double)
+    = (date(line), closingPrice(line))
 
   def closingPrice(line: String): Double = elements(line)(4).toDouble
 

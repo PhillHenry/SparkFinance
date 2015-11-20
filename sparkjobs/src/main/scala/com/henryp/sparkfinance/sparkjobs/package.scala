@@ -40,7 +40,7 @@ package object sparkjobs extends Logging {
   def seriesFor[T <: Tuple2[(U, String), Double], U: ClassTag](aggregated: RDD[T],
                    ticker: String,
                    toDatePrice: (T) => (U, Double)): RDD[(U, Double)] = {
-    aggregated.filter(matchesTicker[T, U](ticker, _)).map(toDatePrice)
+    aggregated.filter(matchesTicker[T](ticker, _)).map(toDatePrice)
   }
 
 }

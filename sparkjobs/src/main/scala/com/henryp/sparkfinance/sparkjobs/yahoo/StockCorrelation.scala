@@ -7,6 +7,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
 import scala.annotation.tailrec
+import scala.reflect.ClassTag
 
 /**
  * Run with arguments like:
@@ -44,19 +45,19 @@ object StockCorrelation extends Logging {
   def doCorrelations(config: StockCorrelationConfig, onFinished: SparkContext => Unit): Seq[(String, String, Double)] = {
     val context       = getSparkContext(config)
     val all           = context.wholeTextFiles(config.directory, minPartitions = config.numPartitions)
-    val aggregated    = aggregate(all, isNotMeta, dateTickerToPrice)
+    val aggregated    = aggregate(all, isNotMeta, dateTickerToPrice[TickerDate])
     val pairs         = comparisonPairs(config.tickers)
     val pairsCorr     = findPearsonCorrelation(pairs, aggregated)
     onFinished(context)
     pairsCorr
   }
 
-  def findPearsonCorrelation(pairs: Seq[(String, String)], aggregated: RDD[DateTickerPrice]): Seq[(String, String, Double)] = {
+  def findPearsonCorrelation[T: ClassTag](pairs: Seq[(String, String)], aggregated: RDD[DateTickerPrice[T]]): Seq[(String, String, Double)] = {
     debug(s"Comparing: ${pairs.mkString(",")}")
     val pairsCorr = pairs map { case (ticker1, ticker2) =>
       debug(s"processing $ticker1 and $ticker2")
-      val series1 = seriesFor(aggregated, ticker1, asDateToPrice _)
-      val series2 = seriesFor(aggregated, ticker2, asDateToPrice _)
+      val series1 = seriesFor(aggregated, ticker1, asDateToPrice[T] _)
+      val series2 = seriesFor(aggregated, ticker2, asDateToPrice[T] _)
       (ticker1, ticker2, pearsonCorrelationValue(series1, series2))
     }
     pairsCorr
