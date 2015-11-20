@@ -1,10 +1,14 @@
 package com.henryp.sparkfinance.feeds
 
+import com.henryp.sparkfinance.feeds.DateParsing.toDaysFromEpoch
+
 package object yahoo {
 
   type TickerDate = String
 
   type DateTickerPriceVolume = ((TickerDate, String), Double, Double)
+
+  type DayTickerPriceVolume = ((Int, String), Double, Double)
 
   type DateTickerPrice = ((TickerDate, String), Double)
 
@@ -12,13 +16,11 @@ package object yahoo {
 
   def dateTickerToPriceVolume(ticker: String, line: String): DateTickerPriceVolume = ((date(line), ticker), closingPrice(line), volume(line))
 
+  def dayTickerToPriceVolume(ticker: String, line: String): DayTickerPriceVolume = ((toDaysFromEpoch(date(line)), ticker), closingPrice(line), volume(line))
+
   def dateTickerToPrice(ticker: String, line: String): DateTickerPrice = ((date(line), ticker), closingPrice(line))
 
   def asDateToPrice(kv: DateTickerPrice): (TickerDate, Double) = (kv._1._1, kv._2)
-
-  def matchesTicker(ticker: String, tuple: DateTickerPriceVolume): Boolean = tuple._1._2.contains(ticker) // TODO remove the directory
-
-  def matchesTicker(ticker: String, tuple: DateTickerPrice): Boolean = tuple._1._2.contains(ticker) // TODO remove the directory
 
   def lineToDateAndClosePrice(line: String): (String, Double) = {
     (date(line), closingPrice(line))

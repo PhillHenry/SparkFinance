@@ -1,5 +1,6 @@
 package com.henryp.sparkfinance
 
+import com.henryp.sparkfinance.feeds._
 import com.henryp.sparkfinance.logging.Logging
 import org.apache.spark.mllib.stat.Statistics
 import org.apache.spark.rdd.RDD
@@ -34,6 +35,12 @@ package object sparkjobs extends Logging {
 
     val algorithm = "pearson"
     Statistics.corr(series1, series2, algorithm)
+  }
+
+  def seriesFor[T <: Tuple2[(U, String), Double], U: ClassTag](aggregated: RDD[T],
+                   ticker: String,
+                   toDatePrice: (T) => (U, Double)): RDD[(U, Double)] = {
+    aggregated.filter(matchesTicker[T, U](ticker, _)).map(toDatePrice)
   }
 
 }

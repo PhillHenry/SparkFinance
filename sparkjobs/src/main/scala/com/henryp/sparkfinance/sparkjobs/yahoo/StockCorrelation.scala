@@ -55,8 +55,8 @@ object StockCorrelation extends Logging {
     debug(s"Comparing: ${pairs.mkString(",")}")
     val pairsCorr = pairs map { case (ticker1, ticker2) =>
       debug(s"processing $ticker1 and $ticker2")
-      val series1 = aggregated.filter(matchesTicker(ticker1, _)).map(asDateToPrice)
-      val series2 = aggregated.filter(matchesTicker(ticker2, _)).map(asDateToPrice)
+      val series1 = seriesFor(aggregated, ticker1, asDateToPrice _)
+      val series2 = seriesFor(aggregated, ticker2, asDateToPrice _)
       (ticker1, ticker2, pearsonCorrelationValue(series1, series2))
     }
     pairsCorr
