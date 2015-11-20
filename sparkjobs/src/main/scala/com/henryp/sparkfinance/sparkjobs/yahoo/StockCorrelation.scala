@@ -1,6 +1,5 @@
 package com.henryp.sparkfinance.sparkjobs.yahoo
 
-import com.henryp.sparkfinance.config.Spark
 import com.henryp.sparkfinance.feeds.yahoo._
 import com.henryp.sparkfinance.logging.Logging
 import com.henryp.sparkfinance.sparkjobs._
@@ -8,12 +7,6 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
 import scala.annotation.tailrec
-
-case class StockCorrelationConfig(directory: String     = "./target",
-                                  sparkUrl: String      = Spark.localMaster,
-                                  tickers: Seq[String]  = List[String](),
-                                  jars: Seq[String]     = List[String](),
-                                  numPartitions: Int    = 2)
 
 /**
  * Run with arguments like:
@@ -25,27 +18,8 @@ case class StockCorrelationConfig(directory: String     = "./target",
  */
 object StockCorrelation extends Logging {
 
-  def parseArgs(args: Array[String]): Option[StockCorrelationConfig] = {
-    val parser = new scopt.OptionParser[StockCorrelationConfig]("StockCorrelation") {
-      opt[String]('d', "directory") action { case(value, config) => config.copy(directory = value) } text "data directory"
-      opt[String]('s', "spark") action { case(value, config) => config.copy(sparkUrl = value) } text "spark URL"
-      opt[Seq[String]]('t', "tickers") valueName "<ticker>,<ticker>..."  action { (value, config) =>
-        config.copy(tickers = value)
-      } text "tickers"
-      opt[Seq[String]]('j', "jars") valueName "<jar1>,<jar2>..."  action { (value, config) =>
-        config.copy(jars = value)
-      } text "jars"
-      opt[Int]('p', "partitions") action { case(value, config) => config.copy(numPartitions = value) } text "number of partions"
-    }
-    parser.parse(args, StockCorrelationConfig())
-  }
-
   def main(args: Array[String]): Unit = {
-    val configOption = parseArgs(args)
-    configOption.orElse {
-      error("invalid arguments: " + args.mkString(","))
-      None
-    } foreach { config =>
+    runWith(args, { config =>
       val comparisons = doCorrelations(config, {context =>
         info("Finished. Press any key to end app")
         Console.in.read
@@ -53,7 +27,7 @@ object StockCorrelation extends Logging {
       })
       info("Finished processing")
       comparisons foreach(x => info(x.toString()))
-    }
+    })
   }
 
   def comparisonPairs[T](tickers: Seq[T]): Seq[(T, T)] = {
@@ -69,9 +43,9 @@ object StockCorrelation extends Logging {
 
   def doCorrelations(config: StockCorrelationConfig, onFinished: SparkContext => Unit): Seq[(String, String, Double)] = {
     val context       = getSparkContext(config)
-    val pairs         = comparisonPairs(config.tickers)
     val all           = context.wholeTextFiles(config.directory, minPartitions = config.numPartitions)
     val aggregated    = aggregate(all, isNotMeta, dateTickerToPrice)
+    val pairs         = comparisonPairs(config.tickers)
     val pairsCorr     = findPearsonCorrelation(pairs, aggregated)
     onFinished(context)
     pairsCorr
@@ -88,12 +62,4 @@ object StockCorrelation extends Logging {
     pairsCorr
   }
 
-  def getSparkContext(config: StockCorrelationConfig): SparkContext = {
-    val context = Spark.sparkContext(config.sparkUrl)
-    config.jars.foreach { jar =>
-      debug(s"Adding JAR $jar")
-      context.addJar(jar)
-    }
-    context
-  }
 }

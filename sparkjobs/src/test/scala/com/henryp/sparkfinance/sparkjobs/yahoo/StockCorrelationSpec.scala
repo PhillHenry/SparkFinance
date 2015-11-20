@@ -15,7 +15,7 @@ class StockCorrelationSpec extends WordSpec with Matchers {
     "be parsed" in {
       val directory = "directory"
       val sparkUrl = "sparkConfig"
-      val configOption = StockCorrelation.parseArgs(Array("-d", directory, "-t", "ticker1,ticker2", "-s", sparkUrl))
+      val configOption = parseArgs(Array("-d", directory, "-t", "ticker1,ticker2", "-s", sparkUrl))
       configOption.orElse(???).map { config =>
         config.directory shouldEqual directory
         config.sparkUrl shouldEqual sparkUrl
