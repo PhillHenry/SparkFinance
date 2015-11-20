@@ -1,5 +1,6 @@
 package com.henryp.sparkfinance.feeds.yahoo
 
+import com.henryp.sparkfinance.feeds.yahoo.YahooFinance.{parseEndDate, parseStartDate}
 import org.scalatest.{Matchers, WordSpec}
 
 class YahooDataSpec extends WordSpec with Matchers {
@@ -11,8 +12,8 @@ class YahooDataSpec extends WordSpec with Matchers {
 
   "date switched" should {
     "be parsed for a URL" in {
-      YahooFinance.parseStartDate("07-19-2007") shouldEqual "a=07&b=19&c=2007"
-      YahooFinance.parseEndDate("07-19-2015") shouldEqual "d=07&e=19&f=2015"
+      parseStartDate("07-19-2007") shouldEqual "a=07&b=19&c=2007"
+      parseEndDate("07-19-2015") shouldEqual "d=07&e=19&f=2015"
     }
   }
 

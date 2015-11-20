@@ -47,8 +47,10 @@ case class YahooFinanceConfig(tickerFile: String    = "tickers.tzt",
 
 object YahooFinance {
 
-  def parseStartDate(date: String): String = s"a=${date.substring(0,2)}&b=${date.substring(3,5)}&c=${date.substring(6,10)}"
-  def parseEndDate(date: String):   String = s"d=${date.substring(0,2)}&e=${date.substring(3,5)}&f=${date.substring(6,10)}"
+  import com.henryp.sparkfinance.feeds.DateParsing._
+
+  def parseStartDate(date: String): String = s"a=${mmddyyyyToMonth(date)}&b=${mmddyyyyToDay(date)}&c=${mmddyyyyToYear(date)}"
+  def parseEndDate(date: String):   String = s"d=${mmddyyyyToMonth(date)}&e=${mmddyyyyToDay(date)}&f=${mmddyyyyToYear(date)}"
 
   def parseArgs(args: Array[String]): Option[YahooFinanceConfig] = {
     val parser = new scopt.OptionParser[YahooFinanceConfig]("Yahoo data extractor") {
