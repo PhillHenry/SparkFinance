@@ -15,8 +15,8 @@ package object yahoo {
   def dateTickerToPriceVolume[T](ticker: String, line: String): DateTickerPriceVolume[T]
     = ((date(line).asInstanceOf[T], ticker), closingPrice(line), volume(line))
 
-  def dayTickerToPriceVolume[T](ticker: String, line: String): DateTickerPriceVolume[T]
-    = ((toDaysFromEpoch(date(line)).asInstanceOf[T], ticker), closingPrice(line), volume(line))
+  def dayTickerToPrice[T](ticker: String, line: String): DateTickerPrice[T]
+    = ((toDaysFromEpoch(date(line)).asInstanceOf[T], ticker), closingPrice(line))
 
   def dateTickerToPrice[T](ticker: String, line: String): DateTickerPrice[T]
     = ((date(line).asInstanceOf[T], ticker), closingPrice(line))

@@ -1,9 +1,9 @@
 package com.henryp.sparkfinance.sparkjobs.yahoo
 
-import com.henryp.sparkfinance.config.Spark
 import com.henryp.sparkfinance.feeds._
 import com.henryp.sparkfinance.feeds.yahoo._
 import com.henryp.sparkfinance.sparkjobs._
+import com.henryp.sparkfinance.sparkjobs.yahoo.YahooIntegrationFixture.{barclaysTicker, dataDirectory, hsbcTicker}
 import org.scalatest.{Matchers, WordSpec}
 
 class StockCorrelationIntegrationSpec extends WordSpec with Matchers {
@@ -18,21 +18,18 @@ class StockCorrelationIntegrationSpec extends WordSpec with Matchers {
 
   "all information loaded" should {
     "be joinable" in {
-      val context       = Spark.sparkContext()
-      val all           = context.wholeTextFiles(dataDirectory)
+
+      val all           = SparkForTests.wholeTextFiles(dataDirectory)
       val aggregated    = aggregate(all, isNotMeta, dateTickerToPrice)
-      val hsba          = aggregated.filter(matchesTicker[DateTickerPrice[TickerDate]]("HSBA", _))
-      val barc          = aggregated.filter(matchesTicker[DateTickerPrice[TickerDate]]("BARC", _))
+      val hsba          = aggregated.filter(matchesTicker[DateTickerPrice[TickerDate]](hsbcTicker, _))
+      val barc          = aggregated.filter(matchesTicker[DateTickerPrice[TickerDate]](barclaysTicker, _))
 
       hsba.count() shouldEqual 9 // 10 lines - 1 meta data line
       barc.count() shouldEqual 9 // ditto
 
-      // TODO more assertions
-
-      context.stop()
     }
   }
 
-  def dataDirectory = (this.getClass.getResource("/") + "../../src/test/resources/tickers/").replaceFirst("^file:", "file://")
+
 
 }
