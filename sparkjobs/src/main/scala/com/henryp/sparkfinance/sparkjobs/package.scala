@@ -37,10 +37,25 @@ package object sparkjobs extends Logging {
     Statistics.corr(series1, series2, algorithm)
   }
 
-  def seriesFor[T <: Tuple2[(U, String), Double], U: ClassTag](aggregated: RDD[T],
-                   ticker: String,
-                   toDatePrice: (T) => (U, Double)): RDD[(U, Double)] = {
-    aggregated.filter(matchesTicker[T](ticker, _)).map(toDatePrice)
+  def seriesFor[D <: Tuple2[(U, String), Double], U: ClassTag](aggregated:  RDD[D],
+                                                               ticker:      String,
+                                                               toDatePrice: (D) => (U, Double)): RDD[(U, Double)]
+    = aggregated.filter(matchesTicker[D](ticker, _)).map(toDatePrice)
+
+
+  def joinByDate[T: ClassTag](tickers:    Seq[String],
+                              domain:     RDD[((T, String), Double)],
+                              toFeature:  (Tuple2[(T, String), Double] => (T, Double)),
+                              toDomain:   (String, String) => ((T, String), Double)): RDD[(T, Seq[Double])] = {
+    val dependent = seriesFor(domain, tickers.head, toFeature)
+    var joined    = dependent.map(kv => (kv._1, Seq(kv._2)))
+
+    for (independentTicker <- tickers.tail) {
+      val independent = seriesFor(domain, independentTicker, toFeature)
+      joined = joined.join(independent).map(kv => (kv._1, kv._2._1 :+ kv._2._2))
+    }
+
+    joined
   }
 
 }
