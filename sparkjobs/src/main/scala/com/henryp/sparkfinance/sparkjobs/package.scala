@@ -45,8 +45,7 @@ package object sparkjobs extends Logging {
 
   def joinByDate[T: ClassTag](tickers:    Seq[String],
                               domain:     RDD[((T, String), Double)],
-                              toFeature:  (Tuple2[(T, String), Double] => (T, Double)),
-                              toDomain:   (String, String) => ((T, String), Double)): RDD[(T, Seq[Double])] = {
+                              toFeature:  (Tuple2[(T, String), Double] => (T, Double))): RDD[(T, Seq[Double])] = {
     val dependent = seriesFor(domain, tickers.head, toFeature)
     var joined    = dependent.map(kv => (kv._1, Seq(kv._2)))
 

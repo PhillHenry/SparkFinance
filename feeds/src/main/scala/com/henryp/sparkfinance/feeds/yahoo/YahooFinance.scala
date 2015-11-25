@@ -2,8 +2,6 @@ package com.henryp.sparkfinance.feeds.yahoo
 
 import java.io.{FileWriter, PrintWriter}
 
-import com.henryp.sparkfinance.feeds.yahoo.YahooFinance.{parseEndDate, parseStartDate}
-
 import scala.io.{BufferedSource, Source}
 import scala.util.{Failure, Try}
 
@@ -11,7 +9,7 @@ class YahooDataExtractor(config: YahooFinanceConfig) {
 
   def readAllTickerData(): Unit = {
     val content: BufferedSource = Source.fromFile(config.tickerFile)
-    content.getLines().foreach(downloadHistoricalData(_))
+    content.getLines().foreach(downloadHistoricalData)
     content.close()
   }
 
@@ -21,26 +19,43 @@ class YahooDataExtractor(config: YahooFinanceConfig) {
     val tried     = Try(hitPage(ticker, handleLine(bufWriter)))
 
     tried match {
-      case Failure(x) => println(ticker)
+      case Failure(x) => println(ticker + " error = " + x.getMessage)
       case _ =>
     }
 
     writer.close()
   }
 
-  def handleLine(writer: PrintWriter): String => Unit = writer.println(_)
+  def handleLine(writer: PrintWriter): (String, Option[String]) => Unit = { case (line, lastLine) =>
+    writer.println(toLine(line, lastLine))
+  }
 
-  def hitPage(ticker: String, lineHandler: String => Unit): Unit = {
-    val startDate = parseStartDate(config.startMMDDYYYY)
-    val endDate   = parseEndDate(config.endMMDDYYYY)
-    val content   = Source.fromURL(s"http://ichart.finance.yahoo.com/table.csv?s=$ticker&$startDate&$endDate&g=d&ignore=.csv")
-    val iterator  = content.getLines()
-    iterator.foreach(x => lineHandler(x))
+  val toLine: ((String, Option[String]) => String) = { case (line, lastLine) =>
+    lastLine.map ({ last =>
+      val priceDiff = diff(closingPriceElement(line), closingPriceElement(last))
+      line + "," + priceDiff
+    }).orElse ({
+      Some(line + ",0")
+    }).get
+  }
+
+  def hitPage(ticker: String, lineHandler: (String, Option[String]) => Unit): Unit = {
+    val startDate                 = config.startMMDDYYYY
+    val endDate                   = config.endMMDDYYYY
+    val url                       = s"http://ichart.finance.yahoo.com/table.csv?s=$ticker&$startDate&$endDate&g=d&ignore=.csv"
+    val content                   = Source.fromURL(url)
+    val iterator                  = content.getLines()
+    var lastLine: Option[String]  = None
+    println(url)
+    iterator.foreach { line =>
+      lineHandler(line, lastLine)
+      if (isNotMeta(line)) lastLine = Some(line)
+    }
     content.close()
   }
 }
 
-case class YahooFinanceConfig(tickerFile: String    = "tickers.tzt",
+case class YahooFinanceConfig(tickerFile: String    = "tickers.txt",
                               startMMDDYYYY: String = "07-19-2007",
                               endMMDDYYYY: String   = "07-19-2015",
                               outputDir: String     = "/tmp")

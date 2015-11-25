@@ -8,6 +8,10 @@ object YahooIntegrationFixture {
 
   val gskTicker = "GSK"
 
-  def dataDirectory = (this.getClass.getResource("/") + "../../src/test/resources/tickers/").replaceFirst("^file:", "file://")
+  val standardCharteredTicker = "STAN"
+
+  val royalBankOfScotland = "RBS"
+
+  def dataDirectory() = (this.getClass.getResource("/") + "../../src/test/resources/tickers/").replaceFirst("^file:", "file://")
 
 }
