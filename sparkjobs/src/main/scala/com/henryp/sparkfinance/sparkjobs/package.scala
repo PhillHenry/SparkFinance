@@ -2,6 +2,7 @@ package com.henryp.sparkfinance
 
 import com.henryp.sparkfinance.feeds._
 import com.henryp.sparkfinance.logging.Logging
+import org.apache.spark.SparkContext
 import org.apache.spark.mllib.stat.Statistics
 import org.apache.spark.rdd.RDD
 
@@ -55,6 +56,12 @@ package object sparkjobs extends Logging {
     }
 
     joined
+  }
+
+  def waitForKeyThenStop(context: SparkContext): Unit = {
+    info("Finished. Press any key to end app")
+    Console.in.read
+    context.stop()
   }
 
 }

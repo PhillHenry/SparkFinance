@@ -22,9 +22,7 @@ object StockCorrelation extends Logging {
   def main(args: Array[String]): Unit = {
     runWith(args, { config =>
       val comparisons = doCorrelations(config, {context =>
-        info("Finished. Press any key to end app")
-        Console.in.read
-        context.stop()
+        waitForKeyThenStop(context)
       })
       info("Finished processing")
       comparisons foreach(x => info(x.toString()))
@@ -33,7 +31,7 @@ object StockCorrelation extends Logging {
 
   def comparisonPairs[T](tickers: Seq[T]): Seq[(T, T)] = {
     @tailrec
-    def allPairs[T](toProcess: List[T], already: Seq[(T, T)]): Seq[(T, T)] = {
+    def allPairs[U](toProcess: List[U], already: Seq[(U, U)]): Seq[(U, U)] = {
       toProcess match {
         case Nil      => already
         case x :: xs  => allPairs(xs,  already ++ xs.map(other => (x, other)))

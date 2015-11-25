@@ -16,7 +16,9 @@ object StockSVM {
   def main(args: Array[String]): Unit = {
     runWith(args, { config =>
       val context         = getSparkContext(config)
-      svmForPriceChanges(config, context)
+      val total = svmForPriceChanges(config, context)
+      println("PnL: " + total)
+      waitForKeyThenStop(context)
     })
   }
 
@@ -56,11 +58,19 @@ object StockSVM {
   def modelAndTestData(dependentTic: String,
                        independentTics: Seq[String],
                        aggregated: RDD[((Int, String), Double)]): (SVMModel, RDD[(Int, (Double, Seq[Double]))]) = {
+    info(s"dependent variables: $dependentTic, independent variables: $independentTics")
     val dependentByDate   = seriesFor(aggregated, dependentTic, asDateToDouble[Int])
     val independentByDate = joinByDate(independentTics, aggregated, asDateToDouble[Int])
     val timeShiftedSeries = shiftIndex1Backward(dependentByDate)
 
-    val maxDate           = independentByDate.map(kv => kv._1).max()
+    // this works but is terribly inefficient:
+    val dates: RDD[Int]   = independentByDate.map(_._1)
+    val maxDate           = dates.collect().max //dates.max()(Ordering.Int)
+
+    // this throws a NPE and I don't know why...
+//    val dates: RDD[Int]   = dependentByDate.map(_._1)
+//    val maxDate           = dates.max()
+
     val splitDate         = maxDate - 30
 
     val model             = buildModel(timeShiftedSeries, independentByDate, filterDateBefore(splitDate))
