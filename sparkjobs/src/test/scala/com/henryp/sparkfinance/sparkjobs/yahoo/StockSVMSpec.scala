@@ -10,18 +10,6 @@ class StockSVMSpec extends WordSpec with Matchers with SparkFixture {
 
   import StockSVMSpec._
 
-  "changes for monotonically increasing series"  should {
-    "all be positive" in {
-      val rdd = toRDD(1 to 10)
-      val changes = valuesOf(changesFor(rdd))
-      withClue(changes) {
-        changes foreach { v =>
-          v shouldEqual 1d
-        }
-      }
-    }
-  }
-
   "negative and zero -> 0, positive -> 1" should {
     "be the mapping" in {
       val rdd = toRDD(-3 to 3)
