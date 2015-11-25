@@ -4,7 +4,8 @@ import com.henryp.sparkfinance.feeds.yahoo._
 import com.henryp.sparkfinance.sparkjobs._
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.classification.{SVMModel, SVMWithSGD}
-import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 
@@ -20,49 +21,87 @@ object StockSVM {
   }
 
   def svmForPriceChanges(config: StockCorrelationConfig, context: SparkContext): Double = {
-    val dependentTic    = config.tickers.head
-    val independentTics = config.tickers.drop(1)
-    val all             = context.wholeTextFiles(config.directory, minPartitions = config.numPartitions)
-    val aggregated      = aggregate(all, isNotMeta, parser)
-    useSVM(dependentTic, independentTics, aggregated)
-  }
+    val dependentTic          = config.tickers.head
+    val independentTics       = config.tickers.drop(1)
+    val aggregated            = allData(config, context)
+    val (model, testingData)  = modelAndTestData(dependentTic, independentTics, aggregated)
+    val advice                = testingData.map(advisedPurchaseBasedOn(model))
+    val total                 = calcTotal(advice)
 
-  def useSVM(dependentTic: String, independentTics: Seq[String], aggregated: RDD[((Int, String), Double)]): Double = {
-    val dependentByDate   = seriesFor(aggregated, dependentTic, asDateToDouble[Int])
-    val independentByDate = joinByDate(independentTics, aggregated, asDateToDouble[Int])
-    val timeShiftedSeries = shiftIndex1Backward(dependentByDate)
-    val model             = buildModel(timeShiftedSeries, independentByDate)
-    val advice            = dependentByDate.join(independentByDate).map(advisedPurchaseBasedOn(model))
-
-    val total = advice.map({ case(date, buy) =>
-      info(s"$date : $buy")
-      buy
-    }).sum()
+    val confidence            = areaUnderROC(model, testingData)
+    info("Area under ROC = " + confidence)
 
     total
   }
 
+  def allData(config: StockCorrelationConfig, context: SparkContext): RDD[((Int, String), Double)] = {
+    val all         = context.wholeTextFiles(config.directory, minPartitions = config.numPartitions)
+    val aggregated  = aggregate(all, isNotMeta, parser)
+    aggregated
+  }
+
+  def areaUnderROC(model: SVMModel, testingData: RDD[(Int, (Double, Seq[Double]))]): Double = {
+    model.clearThreshold()
+    // Compute raw scores on the test set.
+    val scoreAndLabels = testingData.map { case (date, targetAndFeature) =>
+      val score = model.predict(featuresToVector(targetAndFeature._2))
+      (score, targetAndFeature._1)
+    }
+
+    // Get evaluation metrics.
+    val metrics = new BinaryClassificationMetrics(scoreAndLabels)
+    metrics.areaUnderROC()
+  }
+
+  def modelAndTestData(dependentTic: String,
+                       independentTics: Seq[String],
+                       aggregated: RDD[((Int, String), Double)]): (SVMModel, RDD[(Int, (Double, Seq[Double]))]) = {
+    val dependentByDate   = seriesFor(aggregated, dependentTic, asDateToDouble[Int])
+    val independentByDate = joinByDate(independentTics, aggregated, asDateToDouble[Int])
+    val timeShiftedSeries = shiftIndex1Backward(dependentByDate)
+
+    val maxDate           = independentByDate.map(kv => kv._1).max()
+    val splitDate         = maxDate - 30
+
+    val model             = buildModel(timeShiftedSeries, independentByDate, filterDateBefore(splitDate))
+    val testingData       = dependentByDate.filter(filterDateOnOrAfter(splitDate)).join(independentByDate)
+    (model, testingData)
+  }
+
+  def calcTotal(advice: RDD[(Int, Double)]): Double = {
+    val total = advice.map({ case (date, buy) =>
+      info(s"$date : $buy")
+      buy
+    }).sum()
+    total
+  }
+
+  def filterDateBefore(date: Int): Product => Boolean = { tuple => tuple.productElement(0).asInstanceOf[Int] < date }
+  def filterDateOnOrAfter(date: Int): Product => Boolean = { tuple => tuple.productElement(0).asInstanceOf[Int] >= date }
+
   def advisedPurchaseBasedOn(model: SVMModel): ((Int, (Double, Seq[Double]))) => (Int, Double) = { case(date, changeToFeature) =>
     val change    = changeToFeature._1
     val features  = changeToFeature._2
-    val isBuy     = model.predict(Vectors.dense(features.toArray))
+    val isBuy     = model.predict(featuresToVector(features))
     val total     = if (isBuy == 1d) change else 0
     info(s"$date : buy? ${isBuy == 1d}, delta = $change, subtotal = $total")
     (date, total)
   }
 
-  def buildModel(timeShiftedSeries: RDD[(Int, Double)], independentByDate: RDD[(Int, Seq[Double])]): SVMModel = {
+  def buildModel(timeShiftedSeries: RDD[(Int, Double)],
+                 independentByDate: RDD[(Int, Seq[Double])],
+                 filter: Product => Boolean): SVMModel = {
     val rdd       = upOrDown(timeShiftedSeries).join(independentByDate)
-    val maxDate   = independentByDate.map(kv => kv._1).max()
-    val splitDate = maxDate - 30
-    val training  = rdd.filter(kv => kv._1 < splitDate).map(toTargetFeatures).cache()
+    val training  = rdd.filter(filter).map(toTargetFeatures).cache()
 
     train(training)
   }
 
   def toTargetFeatures: ((Int, (Double, Seq[Double]))) => LabeledPoint = { case(date, targetAndFeatures) =>
-    LabeledPoint(targetAndFeatures._1, Vectors.dense(targetAndFeatures._2.toArray))
+    LabeledPoint(targetAndFeatures._1, featuresToVector(targetAndFeatures._2))
   }
+
+  def featuresToVector(features: Seq[Double]): Vector = Vectors.dense(features.toArray)
 
   def train(training: RDD[LabeledPoint]): SVMModel = {
     // Run training algorithm to build the model
