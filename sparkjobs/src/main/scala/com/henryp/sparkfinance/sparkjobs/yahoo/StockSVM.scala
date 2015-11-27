@@ -25,7 +25,7 @@ object StockSVM {
   def svmForPriceChanges(config: StockCorrelationConfig, context: SparkContext): Double = {
     val dependentTic          = config.tickers.head
     val independentTics       = config.tickers.drop(1)
-    val aggregated            = allData(config, context)
+    val aggregated            = allData(config, context).cache()
     val (model, testingData)  = modelAndTestData(dependentTic, independentTics, aggregated)
     val advice                = testingData.map(advisedPurchaseBasedOn(model))
     val total                 = calcTotal(advice)
@@ -59,17 +59,13 @@ object StockSVM {
                        independentTics: Seq[String],
                        aggregated: RDD[((Int, String), Double)]): (SVMModel, RDD[(Int, (Double, Seq[Double]))]) = {
     info(s"dependent variables: $dependentTic, independent variables: $independentTics")
-    val dependentByDate   = seriesFor(aggregated, dependentTic, asDateToDouble[Int])
-    val independentByDate = joinByDate(independentTics, aggregated, asDateToDouble[Int])
+    val dependentByDate   = seriesFor(aggregated, dependentTic, asDateToDouble[Int]).cache()
+    val independentByDate = joinByDate(independentTics, aggregated, asDateToDouble[Int]).cache()
     val timeShiftedSeries = shiftIndex1Backward(dependentByDate)
 
-    // this works but is terribly inefficient:
-    val dates: RDD[Int]   = independentByDate.map(_._1)
-    val maxDate           = dates.collect().max //dates.max()(Ordering.Int)
-
-    // this throws a NPE and I don't know why...
-//    val dates: RDD[Int]   = dependentByDate.map(_._1)
-//    val maxDate           = dates.max()
+    // this throws a NPE if you don't have the same version of Scala in the workers as the driver
+    val dates: RDD[Int]   = dependentByDate.map(_._1)
+    val maxDate           = dates.max()
 
     val splitDate         = maxDate - 30
 
