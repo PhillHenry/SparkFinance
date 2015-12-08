@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>parent</artifactId>
-        <groupId>com.henryp.sparkfinance</groupId>
+        <groupId>uk.co.odinconsultants.sparkfinance</groupId>
         <version>1.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -44,12 +44,12 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.henryp.sparkfinance</groupId>
+            <groupId>uk.co.odinconsultants.sparkfinance</groupId>
             <artifactId>feeds</artifactId>
             <version>${parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.henryp.sparkfinance</groupId>
+            <groupId>uk.co.odinconsultants.sparkfinance</groupId>
             <artifactId>config</artifactId>
             <version>${parent.version}</version>
         </dependency>

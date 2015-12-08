@@ -16,7 +16,7 @@ object StockSVM {
   def main(args: Array[String]): Unit = {
     runWith(args, { config =>
       val context         = getSparkContext(config)
-      val total = svmForPriceChanges(config, context)
+      val total           = svmForPriceChanges(config, context)
       println("PnL: " + total)
       waitForKeyThenStop(context)
     })
@@ -43,7 +43,9 @@ object StockSVM {
   }
 
   def areaUnderROC(model: SVMModel, testingData: RDD[(Int, (Double, Seq[Double]))]): Double = {
-    model.clearThreshold()
+// "If you just want 0/1, you do not want to call clearThreshold()."
+// - https://mail-archives.apache.org/mod_mbox/spark-user/201410.mbox/%3CCACfBfNs-=qa3nmnWXf+XtekuPWaVzGaBEXi-ZiO5AKKk5G37kw@mail.gmail.com%3E
+//    model.clearThreshold()
     // Compute raw scores on the test set.
     val scoreAndLabels = testingData.map { case (date, targetAndFeature) =>
       val score = model.predict(featuresToVector(targetAndFeature._2))
@@ -64,7 +66,7 @@ object StockSVM {
     val timeShiftedSeries = shiftIndex1Backward(dependentByDate)
 
     // this throws a NPE if you don't have the same version of Scala in the workers as the driver
-    val dates: RDD[Int]   = dependentByDate.map(_._1)
+    val dates             = dependentByDate.map(_._1)
     val maxDate           = dates.max()
 
     val splitDate         = maxDate - 30
